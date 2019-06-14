@@ -1,0 +1,287 @@
+---
+title: "Introduction to Phyloseq"
+author: "Nicholas Ollberding"
+date: "7/8/2019"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+#
+<br>
+
+The goal of this interactive session is to introduce you to some of the basic functionality of the phyloseq package (<https://joey711.github.io/phyloseq/index.html>) that can help you to explore and better understand your metagenomic data. We will be working with the phyloseq object that was created during the DADA2 tutorial (<http://benjjneb.github.io/dada2/tutorial.html>).  If you recall, these were murine stool samples collected from a single mouse over time.  The phyloseq object contains: an ASV table, sample metadata, taxonomic classifications, and the reference sequences. We did not generate a phylogenetic tree from these sequences, but if we had, it could be included as well.  
+
+The session will quickly cover some of the basic accessor, analysis and graphical functions available to you when using the phyloseq package in R.
+
+To learn more, Paul McMurdie has an excellent set of tutorials that I encourage you to explore.
+
+* <https://joey711.github.io/phyloseq/preprocess.html>
+* <https://joey711.github.io/phyloseq/index.html>
+  
+<br>
+
+
+# Loading required packages and phyloseq object
+
+```{r load packages}
+library(dada2); packageVersion("dada2")           
+library(phyloseq); packageVersion("phyloseq")      
+library(ggplot2); packageVersion("ggplot2")        
+```
+
+<br>
+
+If the phyloseq (ps) object is not already loaded into your environment...let's go ahead and do that now. You will need to change the path so that it maps to the ps object on your computer.
+
+```{r load phyloseq}
+ps <- readRDS("/Volumes/DBE-69/Presentations/Microbiome Workshop CCHMC Summer 2019/dada2 tutorial/ps.rds")
+```
+<br>
+
+# Accessing the sample information and sample metadata 
+
+```{r ps object}
+ps
+```
+
+* Here we can see that we have a phyloseq object that consists of:
+  + An OTU table with 232 taxa and 19 samples
+  + A sample metadata file consisting of 4 variables
+  + A taxonomy table with 7 ranks
+  + Reference sequences on all 232 taxa
+
+<br>
+  
+This highlights one of the key advantages of working with phyloseq objects in R.  Each of these data structures is contained in a single object. This makes it easy to keep all of your data together and to share it with colleagues or include it as a supplemental file to a publication. 
+
+Next we will see how each of the components can be accessed. We will run through several commands below and then discuss the output. 
+ 
+ 
+
+```{r metadata}
+nsamples(ps)
+sample_names(ps)
+
+sample_variables(ps)
+head(sample_data(ps))
+sample_data(ps)$When
+table(sample_data(ps)$When)
+median(sample_data(ps)$Day)
+
+metadata <- data.frame(sample_data(ps))
+head(metadata)
+```
+
+Here we can see that we have 19 samples and they are assigned the sample names we gave them during the DADA2 tutorial. 
+We also have 4 variables (Subject, Gender, Day, and When) and that information can be easily accessed and computations or descriptive statistics performed.
+Specific components of the ps object can be extracted and converted to a data.frame for additional analyses.
+
+<br>
+
+
+# Examining the number of reads for each sample
+
+Phyloseq makes it easy to calculate the total number of reads for each sample, sort them to identify potentially problematic samples, and plot their distribution.
+
+```{r number of reads}
+sample_sums(ps)
+sort(sample_sums(ps))
+hist(sample_sums(ps), main="Histogram: Read Counts", xlab="Total Reads", 
+     border="blue", col="green", las=1, breaks=12)
+
+metadata$total_reads <- sample_sums(ps)
+```
+Here we see that the number of reads per sample ranges from 2,518 to 16,835 and most samples have less than 10k reads. *Try to calculate the mean and median number of reads on your own.* 
+
+The last line of code above can be used to add a new column containing the total read count to the metadata data.frame. Similarly, sample_data(ps)$total_reads <- sample_sums(ps) would add this information to the phyloseq object itself (as a new sample_data variable).
+
+<br>
+
+
+# Examining the OTU table
+
+```{r otus}
+ntaxa(ps)
+head(taxa_names(ps))
+head(taxa_sums(ps))
+(asv_tab <- data.frame(otu_table(ps)[1:5, 1:5]))
+```
+
+* Phyloseq allows you to easily:
+  + Obtain a count of the number of taxa
+  + Access their names (e.g. ASV1, ASV2, ...)
+  + Get a count of each ASV summed over all samples
+  + Extract the OTU table as a data.frame
+
+<br>
+
+
+# Examining the taxonomy 
+
+```{r taxonomy}
+rank_names(ps)
+head(tax_table(ps))
+head(tax_table(ps)[, 2])
+table(tax_table(ps)[, 2])
+(tax_tab <- data.frame(tax_table(ps)[50:55, ]))
+```
+
+Here we can see that we have information on 7 taxonomic ranks from Kingdom to Species. We can easily access specific components of this object to learn more about the classifications.  For example, we see that the vast majority of ASVs are classified as Firmicutes.  This is in line with our expectations. Conducting such assessments may help you identify potential sequencing errors that made it through the denoising pipeline (i.e. those not assigned to a Kingdom) or to understand the proportion of sequences classified at lower levels (i.e. genus or species).
+
+One could also swap out this taxonomy file for another…say using the [IDTAXA](https://rdrr.io/bioc/DECIPHER/man/IdTaxa.html) function in the [DECIPHER](http://www.bioconductor.org/packages/release/bioc/html/DECIPHER.html) package or an alternative reference database (i.e. Silva or Greengenes).  *I will let you look into this on your own!* 
+
+<br>
+
+
+# Examining the reference sequences
+
+Storing the reference sequences with your phyloseq object is critical of you rename the ASV names to ASV1, ASV2, ...
+This will allow you to communicate the information on these ASVs directly (i.e. you can provide the exact sequence variant information). This information is also required to build a phylogenetic tree or BLAST the sequences against the NCBI database for example. **In short, always include these in the phyloseq object.** 
+
+Below we see that these sequences are stored as a DNAStringSet.  The refseq command returns the ASV number, sequence length, and amplicon sequence for each ASV.  The function [dada2::nwhamming](https://rdrr.io/bioc/dada2/man/nwhamming.html) is calculating the Hamming distance of two sequences after alignment. We will discuss more about this in class. We can also pull out the component and store it as a data.frame.  
+
+```{r refseqs}
+head(refseq(ps))
+dada2::nwhamming(as.vector(refseq(ps)[1]), as.vector(refseq(ps)[2]))
+(ref_tab <- data.frame(head(refseq(ps))))
+```
+
+<br>
+
+# Accessing the phylogenetic tree
+
+We did not generate a phylogenetic tree during the DADA2 tutorial in the interest of time.  However, phyloseq has many excellent tools for working with and visualizing trees. I recommend you take a look at these tutorials below for some examples. 
+
+* <https://joey711.github.io/phyloseq/preprocess.html>
+* <https://joey711.github.io/phyloseq/plot_tree-examples.html>
+
+
+Ben Callahan's [F1000](https://f1000research.com/articles/5-1492) paper demonstrates a complete analysis workflow in R including the construction of a de-novo phylogenetic tree.  I highly recommned you take a look at this paper.   
+
+
+<br>
+
+
+# Agglomerating and subsetting taxa
+
+Often times we may want to agglomerate taxa to a specific  taxonomic rank for analysis.  Or we may want to work with a given subset of taxa.  We can perform these operations in phyloseq with the tax_glom and subset_taxa functions. 
+
+```{r glom}
+(ps_phylum <- tax_glom(ps, "Phylum"))
+taxa_names(ps_phylum)
+taxa_names(ps_phylum) <- tax_table(ps_phylum)[, 2]
+taxa_names(ps_phylum)
+otu_table(ps_phylum)[1:5, c(1:3, 5, 7)]
+```
+
+Here we are agglomerating the counts to the Phylum-level and then renaming the ASVs to make them more descriptive.
+We can see that we have 10 Phyla. The ASV information (i.e. refseq and taxonomy for one of the ASVs in each Phylum) gets carried along for the ride (we can typically ignore this or you can remove these components if you prefer). 
+
+<br>
+
+#### We can also subset taxa...
+
+```{r subset}
+(ps_bacteroides <- subset_taxa(ps, Genus == "Bacteroides"))
+tax_table(ps_bacteroides)
+
+prune_taxa(taxa_sums(ps) > 100, ps) 
+filter_taxa(ps, function(x) sum(x > 10) > (0.1*length(x)), TRUE)   
+```
+
+* With the above commands we can quickly see that we have:
+  + A total of 3 ASVs classified as Bacteroides
+  + A total of 99 ASVs seen at least 100 times across all samples
+  + A total of 135 taxa seen at least 10 times in at least 10% of samples
+  
+**This highlights how we might use phyloseq as a tool to filter taxa prior to statistical analysis.**
+
+<br>
+
+
+# Subsetting samples and tranforming counts
+
+Phyloseq can also be used to subset all the individual components based on sample metadata information.  **This would take a fair bit of work to do properly if we were working with each individual component...and not with phyloseq.**  Below we subset the early stool samples. Then we generate an object that includes only samples with > 5,000 total reads.
+
+```{r subset_samps}
+ps_early <- subset_samples(ps, When == "Early")
+(ps_early = prune_taxa(taxa_sums(ps_early) > 0, ps_early))
+sample_data(ps_early)$When
+sort(sample_sums(ps))
+(ps_reads_GT_5k = prune_samples(sample_sums(ps) > 5000, ps))
+sort(sample_sums(ps_reads_GT_5k))
+```
+
+<br>
+
+Counts can be converted to relative abundances (e.g. total sum scaling) using the transform_sample_counts function.  They can also be subsampled/rarified using the rarefy_even_depth function. However, subsampling to account for differences in sequencing depth acorss samples has important limitations. See the papers below for a more in-depth discussion. 
+
+* [McMurdie and Holmes, Waste Not, Want Not: Why Rarefying Microbiome Data Is Inadmissible](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1003531)
+* [Weiss et. al., Normalization and microbial differential abundance strategies depend upon data characteristics](https://microbiomejournal.biomedcentral.com/articles/10.1186/s40168-017-0237-y)
+
+<br>
+
+```{r transform}
+ps_relabund <- transform_sample_counts(ps, function(x) x / sum(x))
+otu_table(ps_relabund)[1:5, 1:5]
+
+(ps_rare <- rarefy_even_depth(ps, sample.size = 4000, rngseed = 123, replace = FALSE))
+sample_sums(ps_rare)
+```
+
+<br>
+
+
+# Example analytic and graphical capabilities
+
+Phyloseq has an extensive list of functions for processing and analyzing microbiome data. I recommend you view the tutorial section on the phyloseq home page to get a feel for all that phyloseq can do. Below are just a few quick examples.  We will get more into these types of analyses in subsequent sessions.
+ 
+
+
+### Alpha-diversity
+
+Below we will receive a warning that our data does not contain any singletons and that the results of richness estimates are probably unreliable.  This is an important point and we will delve into this issue more in the next session.  For now, you can go ahead and ignore the warning. 
+
+```{r adiv}
+head(estimate_richness(ps))
+(p <- plot_richness(ps, x = "When", color = "When", measures = c("Observed", "Shannon")))
+p + labs(x = "", y = "Alpha Diversity Measure\n") + 
+  theme_bw()
+```
+
+
+### Beta-diversity ordination
+```{r bdiv}
+ps_rare_bray <- ordinate(ps_rare, "NMDS", "bray")
+plot_ordination(ps_rare, ps_rare_bray, type="samples", color="When") + geom_point(size = 3) 
+```
+
+
+### Stacked bar plots
+```{r taxplot}
+plot_bar(ps, fill="Phylum")
+
+plot_bar(ps_relabund, fill="Phylum") + 
+  geom_bar(aes(color = Phylum, fill = Phylum), stat="identity", position="stack") +
+  labs(x = "", y = "Relative Abundance\n") +
+  theme(panel.background = element_blank())
+```
+
+
+### Heatmaps
+```{r heatmap}
+(ps_fam <- tax_glom(ps, "Family"))
+(ps_fam_rare <- rarefy_even_depth(ps_fam, sample.size = 4000, rngseed = 123, replace = FALSE))
+plot_heatmap(ps_fam_rare, sample.label = "When", taxa.label = "Family")
+```
+
+
+
+
+
