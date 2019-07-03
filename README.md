@@ -24,3 +24,7 @@ If you have questions or plan to attend, please contact Alex Thorman, PhD   thor
 - July 8                               Data analysis
 - July 10                              Data interpretation
 - July 15                              Research applications of metagenomics 
+
+<br>
+
+The functional genomics cluster can be accessed at: connect.research.cchmc.org
