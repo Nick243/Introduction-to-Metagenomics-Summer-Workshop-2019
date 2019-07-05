@@ -1,10 +1,10 @@
 ---
 title: "Introduction to Phyloseq"
 author: "Nicholas Ollberding"
-date: "7/8/2019"
+date: "7/10/2019"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -15,7 +15,7 @@ knitr::opts_chunk$set(echo = TRUE)
 #
 <br>
 
-The goal of this interactive session is to introduce you to some of the basic functionality of the phyloseq package (<https://joey711.github.io/phyloseq/index.html>) that can help you to explore and better understand your metagenomic data. We will be working with the phyloseq object that was created during the DADA2 tutorial (<http://benjjneb.github.io/dada2/tutorial.html>).  If you recall, these were murine stool samples collected from a single mouse over time.  The phyloseq object contains: an ASV table, sample metadata, taxonomic classifications, and the reference sequences. We did not generate a phylogenetic tree from these sequences, but if we had, it could be included as well.  
+The goal of this interactive session is to **introduce you to some of the basic functionality of the** [phyloseq package](https://www.bioconductor.org/packages/release/bioc/html/phyloseq.html) that can help you to explore and better understand your metagenomic data. We will be working with the phyloseq object that was created during the [DADA2 tutorial](<http://benjjneb.github.io/dada2/tutorial.html>).  If you recall, these were murine stool samples collected from a single mouse over time.  The phyloseq object contains: an ASV table, sample metadata, taxonomic classifications, and the reference sequences. We did not generate a phylogenetic tree from these sequences, but if we had, it could be included as well.  
 
 The session will quickly cover some of the basic accessor, analysis and graphical functions available to you when using the phyloseq package in R.
 
@@ -37,10 +37,10 @@ library(ggplot2); packageVersion("ggplot2")
 
 <br>
 
-If the phyloseq (ps) object is not already loaded into your environment...let's go ahead and do that now. You will need to change the path so that it maps to the ps object on your computer.
+If the phyloseq (ps) object is not already loaded into your environment...let's go ahead and do that now. You will need to change the path so that it maps to the ps object on your computer. No path is needed if you are working in an RStudio project folder (or if you cloned the folder from GitHub).
 
 ```{r load phyloseq}
-ps <- readRDS("/Volumes/DBE-69/Presentations/Microbiome Workshop CCHMC Summer 2019/dada2 tutorial/ps.rds")
+ps <- readRDS("ps.rds")
 ```
 <br>
 
